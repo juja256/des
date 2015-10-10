@@ -28,7 +28,7 @@ class BitUtils:
         while n / 2 > 0:
             a.insert(0, n % 2)
             n = n / 2
-            
+
         a.insert(0, 1)
 
         if a.length() > size:
@@ -43,3 +43,7 @@ class BitUtils:
     @staticmethod
     def rshift(a, count):
         return a[len(a) - count:] + a[:-count]
+
+    @staticmethod
+    def swap_block64(block):
+        return BitUtils.rshift(block, 32)

@@ -4,11 +4,6 @@ from utils import *
 
 
 class DES:
-    __msg = None
-    __key = bitarray()  # initial 64 bit key
-    __enc = bitarray()
-    __session_keys_pack = []
-
     __ip = (58, 50, 42, 34, 26, 18, 10, 2, 60, 52, 44, 36, 28, 20, 12, 4,
             62, 54, 46, 38, 30, 22, 14, 6, 64, 56, 48, 40, 32, 24, 16, 8,
             57, 49, 41, 33, 25, 17, 9, 1, 59, 51, 43, 35, 27, 19, 11, 3,
@@ -84,7 +79,7 @@ class DES:
         R = block[32:]
         R1 = self.__feistel_function(R, self.__session_keys_pack[iteration])
         R1 ^= L
-        return R + R1
+        return R1 + R
 
     def __feistel_function(self, block, session_key48):
         extended = self.__E.Reduce(block, 48)
@@ -100,6 +95,8 @@ class DES:
             block32 += b4
 
         return self.__P.Substitude(block32)
+
+
 
     def __key_transform64(self):
         tran = bitarray(64 * [0])
@@ -120,20 +117,18 @@ class DES:
             self.__session_keys_pack.append(self.__P7.Reduce(cd, 48))
 
     def __init__(self, **kwargs):
+        self.__msg = None
+        self.__key = bitarray()  # initial 64 bit key
+        self.__enc = bitarray()
+        self.__key_raw = None
+        self.__msg_raw = None
+        self.__session_keys_pack = []
+
         if 'key' in kwargs:
-            if type(kwargs['key']) == bitarray:
-                self.__key = kwargs['key']
-                self.__key_transform64()
-                self.__key_raw = kwargs['key']
-            elif type(kwargs['key']) == str:  # 7 bytes max!!!
-                self.__key.frombytes(kwargs['key'])
-                self.__key_raw = self.__key.copy()
-                self.__key_transform64()
+            self.set_key(kwargs['key'])
 
         if 'data' in kwargs:
-            self.__msg = bitarray()
-            self.__msg.frombytes(kwargs['data'])
-            self.__msg_raw = kwargs['data']
+            self.set_data(kwargs['data'])
 
         self.__P5 = Permutation(self.__p5)
         self.__P7 = Permutation(self.__p7)
@@ -141,33 +136,39 @@ class DES:
         self.__P = Permutation(self.__p)
         self.__IP = Permutation(self.__ip)
 
-    def SetData(self, data):
-        self.__msg = bitarray()
-        self.__msg.frombytes(data)
-        self.__msg_raw = data
+    def set_data(self, data):
+        if type(data) == str:
+            self.__msg = bitarray()
+            self.__msg.frombytes(data)
+            self.__msg_raw = data
+        elif type(data) == bitarray:
+            self.__msg_raw = data
+            self.__msg = data
 
-    def SetKey(self, key):
-        self.__key = key
-        self.__key_transform64()
-        self.__key_raw = key
+    def set_key(self, key):
+        if type(key) == bitarray:
+            if key.length() != 56:
+                raise ValueError("Key is not valid")
+            self.__key = key
+            self.__key_transform64()
+            self.__key_raw = key
+        elif type(key) == str:  # 7 bytes max!!!
+            self.__key.frombytes(key)
+            self.__key_raw = self.__key.copy()
+            self.__key_transform64()
 
-    def GetKey64Bin(self):
+    def get_key_64_bin(self):
         return ' '.join([self.__key[i:i + 8].to01() for i in range(0, len(self.__key), 8)])
 
-    def Encrypt(self, **kwargs):
-
+    def encrypt(self, **kwargs):
         if 'key' in kwargs:
-            self.__key = kwargs['key']
-            self.__key_transform64()
-            self.__key_raw = kwargs['key']
+            self.set_key(kwargs['keys'])
 
         if 'data' in kwargs:
-            self.__msg_raw = kwargs['data']
-            self.__msg = bitarray()
-            self.__msg.fombytes(kwargs['data'])
+            self.set_data(kwargs['data'])
 
         print "Encryption begins...\nKey64: " + BitUtils.bitarray_fancy_view(self.__key)
-        print "Data: " + self.__msg_raw
+        print "Data: " + BitUtils.bitarray_fancy_view(self.__msg)
 
         self.__generate_session_keys_pack()
         adj = (64 - self.__msg.length() % 64) if self.__msg.length() % 64 != 0 else 0
@@ -179,10 +180,45 @@ class DES:
 
             for j in range(0, 16):
                 block = self.__feistel_iteration(j, block)
+
+                if j != 15:
+                    block = BitUtils.swap_block64(block)  # in last iteration we don't need swapping
                 print "block #" + str(i) + "; iteration #" + str(j) + ": " + BitUtils.bitarray_fancy_view(block)
 
-            #print BitUtils.bitarray_fancy_view(block)
             self.__enc += block
         self.__enc = self.__IP.Reverse().Substitude(self.__enc)
         print "Encrypted: " + BitUtils.bitarray_fancy_view(self.__enc)
+        return self.__enc
+
+    def decrypt(self, **kwargs):
+        if 'key' in kwargs:
+            self.set_key(kwargs['keys'])
+
+        if 'data' in kwargs:
+            self.set_data(kwargs['data'])
+
+        if self.__msg.length() % 64 != 0:
+            raise ValueError("Ciphertext' lenght is not divided by 64.")
+
+        print "Decryption begins...\nKey64: " + BitUtils.bitarray_fancy_view(self.__key)
+        print "Data: " + BitUtils.bitarray_fancy_view(self.__msg)
+        self.__generate_session_keys_pack()
+
+        bare = self.__IP.Substitude(self.__msg)
+
+        for i in range(0, bare.length() / 64):
+            block = bare[i * 64:(i + 1) * 64]
+
+            for j in reversed(range(0, 16)):
+                block = self.__feistel_iteration(j, block)
+
+                if j != 0:
+                    block = BitUtils.swap_block64(block)  # in last iteration we don't need swapping
+                print "block #" + str(i) + "; iteration #" + str(j) + ": " + BitUtils.bitarray_fancy_view(block)
+
+            self.__enc += block
+
+        self.__enc = self.__IP.Reverse().Substitude(self.__enc)
+        print "Decrypted: " + BitUtils.bitarray_fancy_view(self.__enc)
+        
         return self.__enc
