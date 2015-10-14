@@ -27,7 +27,7 @@ class BitUtils:
         n = number
         while n / 2 > 0:
             a.insert(0, n % 2)
-            n = n / 2
+            n /= 2
 
         a.insert(0, 1)
 

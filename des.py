@@ -1,4 +1,3 @@
-from bitarray import bitarray
 from perm import *
 from utils import *
 
@@ -167,14 +166,14 @@ class DES:
         if 'data' in kwargs:
             self.set_data(kwargs['data'])
 
-        print "Encryption begins...\nKey64: " + BitUtils.bitarray_fancy_view(self.__key)
-        print "Data: " + BitUtils.bitarray_fancy_view(self.__msg)
+        #print "Encryption begins...\nKey64: " + BitUtils.bitarray_fancy_view(self.__key)
+        #print "Data: " + BitUtils.bitarray_fancy_view(self.__msg)
 
         self.__generate_session_keys_pack()
         adj = (64 - self.__msg.length() % 64) if self.__msg.length() % 64 != 0 else 0
         self.__msg = self.__msg + (bitarray('0') * adj)  # adjust data to 64 bit blocks
         bare = self.__IP.Substitude(self.__msg)
-        print BitUtils.bitarray_fancy_view(bare)
+
         for i in range(0, bare.length() / 64):
             block = bare[i * 64:(i + 1) * 64]
 
@@ -183,11 +182,11 @@ class DES:
 
                 if j != 15:
                     block = BitUtils.swap_block64(block)  # in last iteration we don't need swapping
-                print "block #" + str(i) + "; iteration #" + str(j) + ": " + BitUtils.bitarray_fancy_view(block)
+                #print "block #" + str(i) + "; iteration #" + str(j) + ": " + BitUtils.bitarray_fancy_view(block)
 
             self.__enc += block
         self.__enc = self.__IP.Reverse().Substitude(self.__enc)
-        print "Encrypted: " + BitUtils.bitarray_fancy_view(self.__enc)
+        #print "Encrypted: " + BitUtils.bitarray_fancy_view(self.__enc)
         return self.__enc
 
     def decrypt(self, **kwargs):
@@ -200,8 +199,8 @@ class DES:
         if self.__msg.length() % 64 != 0:
             raise ValueError("Ciphertext' lenght is not divided by 64.")
 
-        print "Decryption begins...\nKey64: " + BitUtils.bitarray_fancy_view(self.__key)
-        print "Data: " + BitUtils.bitarray_fancy_view(self.__msg)
+        #print "Decryption begins...\nKey64: " + BitUtils.bitarray_fancy_view(self.__key)
+        #print "Data: " + BitUtils.bitarray_fancy_view(self.__msg)
         self.__generate_session_keys_pack()
 
         bare = self.__IP.Substitude(self.__msg)
@@ -214,11 +213,11 @@ class DES:
 
                 if j != 0:
                     block = BitUtils.swap_block64(block)  # in last iteration we don't need swapping
-                print "block #" + str(i) + "; iteration #" + str(j) + ": " + BitUtils.bitarray_fancy_view(block)
+                #print "block #" + str(i) + "; iteration #" + str(j) + ": " + BitUtils.bitarray_fancy_view(block)
 
             self.__enc += block
 
         self.__enc = self.__IP.Reverse().Substitude(self.__enc)
-        print "Decrypted: " + BitUtils.bitarray_fancy_view(self.__enc)
-        
+        #print "Decrypted: " + BitUtils.bitarray_fancy_view(self.__enc)
+
         return self.__enc

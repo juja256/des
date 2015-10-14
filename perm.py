@@ -4,7 +4,6 @@ __author__ = 'juja'
 
 
 class Permutation:
-    __bare = None
 
     def __init__(self, l):
         # if sorted(l) != range(1, len(l)+1):
