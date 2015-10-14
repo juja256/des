@@ -86,11 +86,11 @@ class DES:
         block32 = bitarray()
         for i in range(0, 8):
             b6 = xored[i * 6:(i + 1) * 6]
-            a = bitarray([b6[0], b6[5]])
-            b = b6[1:5]
-            aint = BitUtils.bitarray_to_int(a)
-            bint = BitUtils.bitarray_to_int(b)
-            b4 = BitUtils.int_to_bitarray(self.__s[i][aint][bint], 4)
+            a = bitarray([b6[5], b6[0]], endian='little')
+            b = bitarray([b6[4], b6[3], b6[2], b6[1]], endian='little')
+            aint = bitarray_to_int(a)
+            bint = bitarray_to_int(b)
+            b4 = int_to_bitarray(self.__s[i][aint][bint], 4)
             block32 += b4
 
         return self.__P.Substitude(block32)
@@ -110,8 +110,8 @@ class DES:
         cd = self.__P5.Reduce(self.__key, 56)
 
         for i in range(0, 16):
-            c = BitUtils.lshift(cd[:28], self.__shift_table[i])
-            d = BitUtils.lshift(cd[28:], self.__shift_table[i])
+            c = lshift(cd[:28], self.__shift_table[i])
+            d = lshift(cd[28:], self.__shift_table[i])
             cd = c + d
             self.__session_keys_pack.append(self.__P7.Reduce(cd, 48))
 
@@ -166,8 +166,8 @@ class DES:
         if 'data' in kwargs:
             self.set_data(kwargs['data'])
 
-        #print "Encryption begins...\nKey64: " + BitUtils.bitarray_fancy_view(self.__key)
-        #print "Data: " + BitUtils.bitarray_fancy_view(self.__msg)
+        #print "Encryption begins...\nKey64: " + bitarray_fancy_view(self.__key)
+        #print "Data: " + bitarray_fancy_view(self.__msg)
 
         self.__generate_session_keys_pack()
         adj = (64 - self.__msg.length() % 64) if self.__msg.length() % 64 != 0 else 0
@@ -181,12 +181,12 @@ class DES:
                 block = self.__feistel_iteration(j, block)
 
                 if j != 15:
-                    block = BitUtils.swap_block64(block)  # in last iteration we don't need swapping
-                #print "block #" + str(i) + "; iteration #" + str(j) + ": " + BitUtils.bitarray_fancy_view(block)
+                    block = swap_block64(block)  # in last iteration we don't need swapping
+                #print "block #" + str(i) + "; iteration #" + str(j) + ": " + bitarray_fancy_view(block)
 
             self.__enc += block
         self.__enc = self.__IP.Reverse().Substitude(self.__enc)
-        #print "Encrypted: " + BitUtils.bitarray_fancy_view(self.__enc)
+        #print "Encrypted: " + bitarray_fancy_view(self.__enc)
         return self.__enc
 
     def decrypt(self, **kwargs):
@@ -199,8 +199,8 @@ class DES:
         if self.__msg.length() % 64 != 0:
             raise ValueError("Ciphertext' lenght is not divided by 64.")
 
-        #print "Decryption begins...\nKey64: " + BitUtils.bitarray_fancy_view(self.__key)
-        #print "Data: " + BitUtils.bitarray_fancy_view(self.__msg)
+        #print "Decryption begins...\nKey64: " + bitarray_fancy_view(self.__key)
+        #print "Data: " + bitarray_fancy_view(self.__msg)
         self.__generate_session_keys_pack()
 
         bare = self.__IP.Substitude(self.__msg)
@@ -212,12 +212,12 @@ class DES:
                 block = self.__feistel_iteration(j, block)
 
                 if j != 0:
-                    block = BitUtils.swap_block64(block)  # in last iteration we don't need swapping
-                #print "block #" + str(i) + "; iteration #" + str(j) + ": " + BitUtils.bitarray_fancy_view(block)
+                    block = swap_block64(block)  # in last iteration we don't need swapping
+                #print "block #" + str(i) + "; iteration #" + str(j) + ": " + bitarray_fancy_view(block)
 
             self.__enc += block
 
         self.__enc = self.__IP.Reverse().Substitude(self.__enc)
-        #print "Decrypted: " + BitUtils.bitarray_fancy_view(self.__enc)
+        #print "Decrypted: " + bitarray_fancy_view(self.__enc)
 
         return self.__enc

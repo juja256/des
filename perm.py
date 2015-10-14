@@ -1,7 +1,5 @@
 from bitarray import *
 
-__author__ = 'juja'
-
 
 class Permutation:
 
@@ -34,8 +32,9 @@ class Permutation:
             raise ValueError("Not valid type of input data")
 
         res = bitarray(bits.length() * [0])
+        size = len(self.__bare)
         for i in range(0, bits.length()):
-            res[i] = bits[(i / len(self.__bare)) * len(self.__bare) + self.__bare[i % len(self.__bare)]]
+            res[i] = bits[(i / size) * size + self.__bare[i % size]]
         return res
 
     def Reduce(self, block, size):
